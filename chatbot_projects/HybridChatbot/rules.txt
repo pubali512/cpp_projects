@@ -1,0 +1,5 @@
+hi|Welcome to my AI assistant!
+hello|Hi there!
+bye|Goodbye! Have a great day!
+help|You can ask using define:, explain:, or ml term:
+thanks|You're welcome!

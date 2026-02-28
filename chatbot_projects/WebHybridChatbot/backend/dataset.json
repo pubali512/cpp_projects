@@ -1,0 +1,82 @@
+[
+  {
+    "q": "What is the difference between AI and Machine Learning?",
+    "a": "AI is the broad concept of machines being able to carry out tasks in a way that we would consider 'smart'. Machine Learning is a subset of AI that focuses on the ability of machines to receive a set of data and learn for themselves, changing algorithms as they learn more about the information they are processing."
+  },
+  {
+    "q": "What is Unsupervised Learning?",
+    "a": "Unsupervised learning is a type of machine learning where the algorithm is given data without explicit instructions on what to do with it. The system attempts to learn the patterns and structure from the data without any labeled outcomes."
+  },
+  {
+    "q": "What is Reinforcement Learning?",
+    "a": "Reinforcement learning is an area of machine learning concerned with how intelligent agents ought to take actions in an environment to maximize some notion of cumulative reward."
+  },
+  {
+    "q": "What is Overfitting in ML?",
+    "a": "Overfitting occurs when a machine learning model matches the training data too closely, capturing noise along with the underlying pattern. This makes it perform poorly on new, unseen data."
+  },
+  {
+    "q": "What is an Activation Function?",
+    "a": "An activation function is a mathematical formula added to neural networks to help the network learn complex patterns in data. It determines whether a specific neuron should be activated or not."
+  },
+  {
+    "q": "What is a Convolutional Neural Network (CNN)?",
+    "a": "A CNN is a type of deep neural network most commonly applied to analyzing visual imagery. It uses a mathematical operation called convolution to process pixel data."
+  },
+  {
+    "q": "What is Natural Language Processing (NLP)?",
+    "a": "NLP is a field of AI that gives computers the ability to understand, interpret, and generate human language, both written and spoken."
+  },
+  {
+    "q": "What is a Transformer model?",
+    "a": "A Transformer is a deep learning model that adopts the mechanism of self-attention, differentially weighing the significance of each part of the input data. It is the foundation for modern LLMs like GPT."
+  },
+  {
+    "q": "What is NLP?",
+    "a": "NLP stands for Natural Language Processing. It is the branch of AI that deals with the interaction between computers and human language."
+  },
+  {
+    "q": "What does LLM stand for?",
+    "a": "LLM stands for Large Language Model. These are AI models like GPT-4 trained on massive amounts of text data to understand and generate human-like language."
+  },
+  {
+    "q": "What is a GAN?",
+    "a": "GAN stands for Generative Adversarial Network. It consists of two neural networks (a Generator and a Discriminator) that compete against each other to create realistic data, like images."
+  },
+  {
+    "q": "What is RAG?",
+    "a": "RAG stands for Retrieval-Augmented Generation. It is a technique that gives LLMs access to specific, external data (like your dataset.json) to provide more accurate answers."
+  },
+  {
+    "q": "What is SGD?",
+    "a": "SGD stands for Stochastic Gradient Descent. It is an optimization algorithm used to minimize the error in machine learning models during training."
+  },
+  {
+    "q": "What is CNN and RNN?",
+    "a": "CNN (Convolutional Neural Network) is mainly used for image processing. RNN (Recurrent Neural Network) is designed for sequential data like text or time-series."
+  },
+  {
+    "q": "What does API mean in AI?",
+    "a": "API stands for Application Programming Interface. In AI, it's the bridge that allows your React frontend to talk to your C++ backend or external models like OpenAI."
+  },
+  {
+    "q": "What is MSE (Mean Squared Error)?",
+    "a": "Mean Squared Error (MSE) is a common loss function used in model evaluation. It measures the average of the squares of the errors—that is, the average squared difference between the estimated values and the actual value."
+  },
+  {
+    "q": "What is ReLU (Rectified Linear Unit)?",
+    "a": "ReLU is the most commonly used activation function in deep learning. It outputs the input directly if it is positive; otherwise, it outputs zero, helping models learn non-linear relationships."
+  },
+  {
+    "q": "Explain LSTM (Long Short-Term Memory)",
+    "a": "LSTM is a type of Recurrent Neural Network (RNN) architecture used in sequence modeling. It is designed to learn long-term dependencies, making it excellent for tasks like speech recognition and time-series prediction."
+  },
+  {
+    "q": "What is SaaS (Software as a Service) in AI?",
+    "a": "In the context of AI deployment, SaaS refers to delivering AI capabilities over the internet. Instead of installing complex models locally, users access the AI through APIs or web interfaces."
+  },
+  {
+    "q": "What is CV (Computer Vision)?",
+    "a": "Computer Vision (CV) is a field of AI that enables computers to derive meaningful information from digital images, videos, and other visual inputs, allowing machines to 'see' and interpret the world."
+  }
+]

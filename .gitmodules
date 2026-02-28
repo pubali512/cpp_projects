@@ -1,0 +1,3 @@
+[submodule "chatbot_projects/WebHybridChatbot/external/crow"]
+	path = chatbot_projects/WebHybridChatbot/external/crow
+	url = https://github.com/CrowCpp/Crow.git

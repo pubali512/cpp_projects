@@ -1,0 +1,40 @@
+what is machine learning|Machine learning is a branch of artificial intelligence that enables systems to learn from data.
+define machine learning|Machine learning allows computers to learn patterns from data without being explicitly programmed.
+types of machine learning|The main types of machine learning are supervised learning, unsupervised learning, and reinforcement learning.
+what is supervised learning|Supervised learning uses labeled data to train models.
+what is unsupervised learning|Unsupervised learning finds hidden patterns in unlabeled data.
+what is reinforcement learning|Reinforcement learning trains an agent using rewards and penalties.
+what is deep learning|Deep learning is a subset of machine learning that uses multi-layer neural networks.
+what is neural network|A neural network is a computational model inspired by the human brain.
+what is training data|Training data is the data used to train a machine learning model.
+what is testing data|Testing data is used to evaluate the performance of a trained model.
+what is validation data|Validation data is used to tune model parameters.
+what is overfitting|Overfitting occurs when a model performs well on training data but poorly on unseen data.
+what is underfitting|Underfitting occurs when a model is too simple to capture patterns in data.
+what is accuracy|Accuracy measures how often predictions are correct.
+what is precision|Precision measures how many predicted positives are actually correct.
+what is recall|Recall measures how many actual positives were correctly identified.
+what is f1 score|F1 score is the harmonic mean of precision and recall.
+what is classification|Classification predicts categorical labels.
+what is regression|Regression predicts continuous numerical values.
+what is clustering|Clustering groups similar data points together.
+what is k means clustering|K-means is an unsupervised algorithm that groups data into k clusters.
+what is decision tree|A decision tree is a supervised algorithm for classification and regression.
+what is random forest|Random forest is an ensemble learning method using multiple decision trees.
+what is support vector machine|Support vector machine is a supervised learning algorithm for classification and regression.
+what is gradient descent|Gradient descent is an optimization algorithm used to minimize loss.
+what is loss function|A loss function measures the error between predicted and actual values.
+what is feature engineering|Feature engineering transforms raw data into meaningful features.
+what is dimensionality reduction|Dimensionality reduction reduces the number of input features.
+what is pca|Principal component analysis is a dimensionality reduction technique.
+what is natural language processing|Natural language processing enables machines to understand human language.
+what is tf idf|TF-IDF measures the importance of words in documents.
+what is cosine similarity|Cosine similarity measures similarity between two vectors.
+what is bias variance tradeoff|Bias variance tradeoff balances model complexity and performance.
+what is cross validation|Cross validation evaluates model performance using multiple data splits.
+what is hyperparameter tuning|Hyperparameter tuning improves model performance by adjusting parameters.
+what is machine learning model|A machine learning model is a mathematical representation learned from data.
+cnn|Convolutional Neural Network 
+relu|Rectified Linear Unit 
+lstm|Long short-term memory (LSTM) is a type of recurrent neural network (RNN) aimed at mitigating the vanishing gradient problem commonly encountered by traditional RNNs.
+bye|Goodbye! Have a great day!

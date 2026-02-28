@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    /* In v4, the CSS variable can be used directly or the theme function */
+    background-color: theme('colors.slate.950');   /* Deep Dark */
+    color: theme('colors.slate.50');               /* Crisp White */
+  }
+}
