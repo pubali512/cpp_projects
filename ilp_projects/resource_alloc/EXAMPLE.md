@@ -17,19 +17,18 @@ cost = 350
 
 
 # PROJECT 
-system_architect  = 25 
-software_architect= 25
-developer         = 6
+system_architect  = 15 
+software_architect= 10
 tester            = 4
 
 # PROJECT 
-system_architect  = 16
+system_architect  = 10
 software_architect= 14
 developer         = 8
 tester            = 6
 
 # PROJECT 
-software_architect= 20
+software_architect= 10
 developer         = 5
 tester            = 10
 

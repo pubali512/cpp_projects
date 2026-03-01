@@ -1,29 +1,28 @@
 #pragma once
 
+#include "Optimize.h"
+
 #include <string>
 #include <vector>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // OptimizeByILP
 //
-// Reads the populated DataStore singleton and writes an LP_Solve-compatible
-// .lp file.
+// Reads the populated DataStore singleton, writes an LP_Solve-compatible
+// .lp file, invokes lp_solve, and populates the inherited m_results map.
+// Inherits AllocResult, PairKey, m_results, printResults and formula helpers
+// from Optimize.
 //
 // LP formulation  (README – "Formulation of the ILP Problem")
 // ─────────────────────────────────────────────────────────────
-// For each (project T, resource R) with N_RT base units required:
 //   Decision variables : X_RT_i ∈ {0,1}  for i = 1 … N_RT
-//     X_RT_i = 1  iff  i units of resource R are allocated to project T
-//
-//   Time saving  : S_RT_i = N_RT − ⌈N_RT / i⌉
-//   Extra cost   : C_RT_i = C_R · (i − 1)
-//   Minimum cost : C_min  = Σ_{R,T} N_RT · C_R   (one resource per (R,T))
-//
-//   Objective              : maximise  Σ_{R,T,i}  S_RT_i · X_RT_i
-//   Non-budget constraints : Σ_i X_RT_i = 1  for every (R,T)  [exactly one level]
-//   Budget constraint      : Σ_{R,T,i} C_RT_i · X_RT_i  ≤  C_additionalBudget
+//   Objective          : maximise  Σ S_RT_i · X_RT_i
+//   Equality           : Σ_i X_RT_i = 1  for every (R,T)
+//   Budget             : Σ C_RT_i · X_RT_i ≤ C_additionalBudget
+//   S_RT_i = N − ⌈N/i⌉
+//   C_RT_i = ⌈N/i⌉ × C_R × (i−1)
 // ─────────────────────────────────────────────────────────────────────────────
-class OptimizeByILP
+class OptimizeByILP : public Optimize
 {
 public:
     OptimizeByILP() = default;
@@ -32,16 +31,17 @@ public:
     /// Throws std::runtime_error if the file cannot be created.
     void generateLPFile(const std::string& outputPath) const;
 
-    /// Generate a temporary .lp file, run lp_solve, wait up to @p timeoutSeconds,
-    /// then parse the solver output and print human-readable results to stdout.
-    /// Temporary files are always deleted before creation and left on disk for
-    /// inspection afterwards.
-    void solve(int timeoutSeconds = 300) const;
+    /// Set the solver timeout (seconds) used by solve().  Default: 300 s.
+    void setTimeoutSeconds(int t) { m_timeoutSeconds = t; }
+
+    /// Generate a temporary .lp file, run lp_solve, wait up to the configured
+    /// timeout, populate m_results, and print human-readable results to stdout.
+    void solve() override;
 
 private:
-    // ── Internal variable descriptor ──────────────────────────────────────────
+    int m_timeoutSeconds{300};
 
-    /// One entry in the flat variable table.
+    // ── Internal LP variable descriptor ───────────────────────────────────
     struct AllocVar
     {
         int    resourceId;  ///< Resource R id
@@ -55,24 +55,13 @@ private:
     /// Build the flat list of AllocVar descriptors from the DataStore.
     std::vector<AllocVar> buildVarTable() const;
 
-    // ── Section generators ────────────────────────────────────────────────────
-
-    /// Returns the LP_Solve objective-function section.
-    ///   max: S_RT_i x_r1_p1_2 + ...;
-    std::string generateObjectiveFunction() const;
-
-    /// Returns one equality constraint per (R,T) pair.
-    ///   eq_r1_p1: x_r1_p1_1 + x_r1_p1_2 + ... = 1;
+    // ── LP section generators ──────────────────────────────────────────────
+    std::string generateObjectiveFunction()    const;
     std::string generateNonBudgetConstraints() const;
+    std::string generateBudgetConstraint()     const;
+    std::string generateBinaryDeclarations()   const;
 
-    /// Returns the extra-budget inequality.
-    ///   budget: C_RT_i x_r1_p1_2 + ... <= C_budget - C_min;
-    std::string generateBudgetConstraint() const;
-
-    /// Returns the binary-variable declaration section.
-    ///   bin x_r1_p1_1, x_r1_p1_2, ...;
-    std::string generateBinaryDeclarations() const;
-
-    /// Parse raw lp_solve stdout and print a human-readable summary.
-    void parseAndPrintResults(const std::string& solverOutput) const;
+    /// Parse raw lp_solve output and populate m_results.
+    /// Returns true if a feasible (optimal) solution was found.
+    bool parseResults(const std::string& solverOutput);
 };

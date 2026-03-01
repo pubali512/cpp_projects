@@ -20,7 +20,7 @@
 #endif
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Internal helpers
+// Internal helpers  (LP-file generation only)
 // ─────────────────────────────────────────────────────────────────────────────
 namespace {
 
@@ -33,24 +33,6 @@ std::string fmtDouble(double v)
     std::ostringstream oss;
     oss << v;
     return oss.str();
-}
-
-/// Time saving when allocating i units to a task that originally needs N units.
-/// S = N - ceil(N / i)
-int timeSaving(int N, int i)
-{
-    return N - static_cast<int>(std::ceil(static_cast<double>(N) / static_cast<double>(i)));
-}
-
-/// Additional cost of allocating i resources to a task that originally needs N weeks.
-/// The task finishes in ceil(N/i) weeks; (i-1) extra resources are hired for that duration.
-/// C_RT_i = ceil(N/i) * C_R * (i - 1)
-/// For i=1 this is 0 (no extra resources hired).
-double extraCost(int N, int i, double cR)
-{
-    if (i <= 1) return 0.0;
-    const double duration = std::ceil(static_cast<double>(N) / static_cast<double>(i));
-    return duration * cR * static_cast<double>(i - 1);
 }
 
 } // anonymous namespace
@@ -256,8 +238,9 @@ std::string OptimizeByILP::generateBinaryDeclarations() const
 // ─────────────────────────────────────────────────────────────────────────────
 // OptimizeByILP::solve
 // ─────────────────────────────────────────────────────────────────────────────
-void OptimizeByILP::solve(int timeoutSeconds) const
+void OptimizeByILP::solve()
 {
+    const int timeoutSeconds = m_timeoutSeconds;
     const std::string lpPath  = "_resource_alloc_tmp.lp";
     const std::string outPath = "_resource_alloc_tmp_out.txt";
 
@@ -265,7 +248,7 @@ void OptimizeByILP::solve(int timeoutSeconds) const
     std::remove(lpPath.c_str());
     std::remove(outPath.c_str());
 
-    std::cout << "Generating LP file: " << lpPath << " ...\n";
+    // std::cout << "Generating LP file: " << lpPath << " ...\n";
     generateLPFile(lpPath);
 
 #if defined(_WIN32)
@@ -311,7 +294,7 @@ void OptimizeByILP::solve(int timeoutSeconds) const
             "solve: failed to launch lp_solve (WinError " +
             std::to_string(GetLastError()) + ")");
 
-    std::cout << "Running lp_solve (timeout: " << timeoutSeconds << "s) ...\n";
+    // std::cout << "Running lp_solve (timeout: " << timeoutSeconds << "s) ...\n";
 
     const DWORD waitMs     = static_cast<DWORD>(timeoutSeconds) * 1000u;
     const DWORD waitResult = WaitForSingleObject(pi.hProcess, waitMs);
@@ -347,14 +330,20 @@ void OptimizeByILP::solve(int timeoutSeconds) const
         std::istreambuf_iterator<char>{}
     );
 
-    parseAndPrintResults(content);
+    if (parseResults(content))
+        printResults("LP Solver Results");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OptimizeByILP::parseAndPrintResults
+// OptimizeByILP::parseResults
+//
+// Parse raw lp_solve output and populate m_results.
+// Returns true if a feasible (optimal) solution was found.
 // ─────────────────────────────────────────────────────────────────────────────
-void OptimizeByILP::parseAndPrintResults(const std::string& solverOutput) const
+bool OptimizeByILP::parseResults(const std::string& solverOutput)
 {
+    m_results.clear();
+
     // ── Infeasibility check ───────────────────────────────────────────────────
     std::string lower = solverOutput;
     std::transform(lower.begin(), lower.end(), lower.begin(),
@@ -364,21 +353,17 @@ void OptimizeByILP::parseAndPrintResults(const std::string& solverOutput) const
     {
         std::cout << "\n=== LP Solver Result: INFEASIBLE ===\n"
                   << "No feasible solution exists within the given constraints.\n";
-        return;
+        return false;
     }
 
-    // ── Parse objective value ───────────────────────────────────────────────
-    double objValue = 0.0;
+    // ── Verify objective value token is present ────────────────────────────
     {
         const std::string tok = "Value of objective function: ";
-        const auto pos = solverOutput.find(tok);
-        if (pos == std::string::npos)
+        if (solverOutput.find(tok) == std::string::npos)
         {
             std::cout << "\n=== Raw solver output ===\n" << solverOutput << '\n';
-            return;
+            return false;
         }
-        try { objValue = std::stod(solverOutput.substr(pos + tok.size())); }
-        catch (...) {}
     }
 
     // ── Build name → AllocVar* lookup ─────────────────────────────────────────
@@ -387,9 +372,30 @@ void OptimizeByILP::parseAndPrintResults(const std::string& solverOutput) const
     for (const auto& v : allVars)
         varLookup[v.name] = &v;
 
+    // ── Pre-initialise m_results for every (R,T) pair at baseline i=1 ─────
+    const DataStore& ds = DataStore::getInstance();
+    for (const auto& [pid, pPtr] : ds.getProjects())
+    {
+        for (const auto& [rid, unitsDouble] : pPtr->getResourceCosts())
+        {
+            const Resource* r = ds.getResourceById(rid);
+            if (!r) continue;
+
+            PairKey     key{rid, pid};
+            AllocResult ar;
+            ar.resourceId     = rid;
+            ar.projectId      = pid;
+            ar.N              = static_cast<int>(unitsDouble);
+            ar.costPerUnit    = r->getCost();
+            ar.selectedI      = 1;
+            ar.selectedCost   = 0.0;
+            ar.selectedSaving = 0;
+            m_results[key]    = ar;
+        }
+    }
+
     // ── Parse active (=1) variables from solver output ────────────────────
     // lp_solve only prints non-zero variables; each line: "<name>    <value>"
-    std::vector<const AllocVar*> active;
     {
         std::istringstream ss(solverOutput);
         std::string line;
@@ -404,63 +410,20 @@ void OptimizeByILP::parseAndPrintResults(const std::string& solverOutput) const
             if (val > 0.5)
             {
                 const auto it = varLookup.find(name);
-                if (it != varLookup.end())
-                    active.push_back(it->second);
+                if (it == varLookup.end()) continue;
+
+                const AllocVar* v   = it->second;
+                PairKey         key{v->resourceId, v->projectId};
+                auto            rit = m_results.find(key);
+                if (rit == m_results.end()) continue;
+
+                AllocResult& ar    = rit->second;
+                ar.selectedI       = v->i;
+                ar.selectedCost    = extraCost(v->N, v->i, v->costPerUnit);
+                ar.selectedSaving  = timeSaving(v->N, v->i);
             }
         }
     }
 
-    // ── Group active vars by project ──────────────────────────────────────
-    std::map<int, std::vector<const AllocVar*>> byProject;
-    for (const AllocVar* v : active)
-        byProject[v->projectId].push_back(v);
-
-    // ── Print ─────────────────────────────────────────────────────────────────────
-    const DataStore& ds = DataStore::getInstance();
-    const int W = 24; // column width for resource names
-
-    std::cout << "\n=== LP Solver Results ===\n"
-              << "Status  : OPTIMAL\n"
-              << "Objective (total time saving): "
-              << static_cast<long long>(objValue) << " week(s)\n";
-
-    double grandExtraCost  = 0.0;
-
-    for (const auto& [pid, allocList] : byProject)
-    {
-        std::cout << "\n--- Project " << pid << " ---\n";
-
-        int    projSaving   = 0;
-        double projExtraCost = 0.0;
-
-        for (const AllocVar* v : allocList)
-        {
-            const Resource* r = ds.getResourceById(v->resourceId);
-            const std::string rName = r ? r->getName()
-                                        : ("resource_" + std::to_string(v->resourceId));
-
-            const int    S     = timeSaving(v->N, v->i);
-            const double extra = extraCost(v->N, v->i, v->costPerUnit);
-
-            projSaving    += S;
-            projExtraCost += extra;
-
-            std::cout << "  "
-                      << std::left << std::setw(W) << rName
-                      << ": " << std::right << std::setw(3) << v->i << " unit(s) allocated"
-                      << "  |  time saving: " << std::setw(3) << S << " week(s)"
-                      << "  |  extra cost: $" << static_cast<long long>(extra) << "\n";
-        }
-
-        std::cout << "  " << std::string(68, '-') << "\n"
-                  << "  Project time saving : " << projSaving   << " week(s)\n"
-                  << "  Project extra cost  : $"
-                  << static_cast<long long>(projExtraCost) << "\n";
-
-        grandExtraCost  += projExtraCost;
-    }
-
-    std::cout << "\n" << std::string(70, '=') << "\n"
-              << "Total time saving    : " << static_cast<long long>(objValue) << " week(s)\n"
-              << "Total additional cost: $" << static_cast<long long>(grandExtraCost) << "\n";
+    return true;
 }

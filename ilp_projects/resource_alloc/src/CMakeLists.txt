@@ -3,6 +3,7 @@
 add_executable(resource_alloc
     main.cpp
     DataStructures.cpp
+    Optimize.cpp
     OptimizeByILP.cpp
     OptimizeByHeuristic.cpp
 )

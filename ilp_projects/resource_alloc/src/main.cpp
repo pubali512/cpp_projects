@@ -5,7 +5,28 @@
 #include "OptimizeByHeuristic.h"
 #include "OptimizeByILP.h"
 
-int main(int argc, char* argv[])
+void printData(const DataStore &ds)
+{
+    std::cout << "=== Resources (" << ds.getResources().size() << ") ===\n";
+    for (const auto &[id, r] : ds.getResources())
+        std::cout << "  [" << id << "] " << r->getName()
+                  << "  cost=$" << r->getCost() << "/week\n";
+
+    std::cout << "\n=== Projects (" << ds.getProjects().size() << ") ===\n";
+    for (const auto &[pid, p] : ds.getProjects())
+    {
+        std::cout << "  Project [" << pid << "]:\n";
+        for (const auto &[rid, units] : p->getResourceCosts())
+        {
+            const auto *r = ds.getResourceById(rid);
+            if (r)
+                std::cout << "    " << r->getName() << " -> " << units << " weeks\n";
+        }
+    }
+    std::cout << "\nAdditional budget: $" << ds.getAdditionalBudget() << '\n';
+}
+
+int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
@@ -15,31 +36,12 @@ int main(int argc, char* argv[])
     }
 
     const int timeout = (argc >= 3) ? std::stoi(argv[2]) : 300;
-
     try
     {
-        DataStore& ds = DataStore::getInstance();
+        DataStore &ds = DataStore::getInstance();
         ds.loadFromFile(argv[1]);
 
-        // ── Print Resources ───────────────────────────────────────────────────
-        std::cout << "=== Resources (" << ds.getResources().size() << ") ===\n";
-        for (const auto& [id, r] : ds.getResources())
-            std::cout << "  [" << id << "] " << r->getName()
-                      << "  cost=$" << r->getCost() << "/week\n";
-
-        // ── Print Projects ────────────────────────────────────────────────────
-        std::cout << "\n=== Projects (" << ds.getProjects().size() << ") ===\n";
-        for (const auto& [pid, p] : ds.getProjects())
-        {
-            std::cout << "  Project [" << pid << "]:\n";
-            for (const auto& [rid, units] : p->getResourceCosts())
-            {
-                const auto* r = ds.getResourceById(rid);
-                if (r)
-                    std::cout << "    " << r->getName() << " -> " << units << " weeks\n";
-            }
-        }
-        std::cout << "\nAdditional budget: $" << ds.getAdditionalBudget() << '\n';
+        // printData(ds);
 
         // ── Heuristic ────────────────────────────────────────────────────────
         OptimizeByHeuristic heuristic;
@@ -47,9 +49,10 @@ int main(int argc, char* argv[])
 
         // ── ILP (exact) ──────────────────────────────────────────────────────
         OptimizeByILP optimizer;
-        optimizer.solve(timeout);
+        optimizer.setTimeoutSeconds(timeout);
+        optimizer.solve();
     }
-    catch (const std::exception& ex)
+    catch (const std::exception &ex)
     {
         std::cerr << "Error: " << ex.what() << '\n';
         return 1;
