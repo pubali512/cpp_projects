@@ -1,3 +1,7 @@
+# GENERAL
+time_unit = week
+cost_unit = $
+
 
 # RESOURCE
 name = system_architect 

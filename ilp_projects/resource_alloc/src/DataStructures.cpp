@@ -100,6 +100,8 @@ void DataStore::clear()
     m_projects.clear();
 
     m_additionalBudget = 0.0;
+    m_timeUnit = "week";
+    m_costUnit = "dollar";
 }
 
 void DataStore::loadFromFile(const std::string& filepath)
@@ -109,7 +111,7 @@ void DataStore::loadFromFile(const std::string& filepath)
         throw std::runtime_error("DataStore::loadFromFile – cannot open file: " + filepath);
 
     // ── Section state ─────────────────────────────────────────────────────────
-    enum class Section { None, Resource, Project, AdditionalBudget };
+    enum class Section { None, General, Resource, Project, AdditionalBudget };
 
     Section current = Section::None;
 
@@ -151,6 +153,12 @@ void DataStore::loadFromFile(const std::string& filepath)
             continue;
 
         // Section headers
+        if (trimmed == "# GENERAL")
+        {
+            finalizeSection();
+            current = Section::General;
+            continue;
+        }
         if (trimmed == "# RESOURCE")
         {
             finalizeSection();
@@ -175,7 +183,12 @@ void DataStore::loadFromFile(const std::string& filepath)
         if (key.empty() || val.empty())
             continue;
 
-        if (current == Section::Resource)
+        if (current == Section::General)
+        {
+            if (key == "time_unit") m_timeUnit = val;
+            else if (key == "cost_unit") m_costUnit = val;
+        }
+        else if (current == Section::Resource)
         {
             resourceAttribs[key] = val;
         }

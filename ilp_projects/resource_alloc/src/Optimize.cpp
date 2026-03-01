@@ -45,11 +45,14 @@ void Optimize::printResults(const std::string& title) const
         totalExtraCost  += ar.selectedCost;
     }
 
+    const std::string& tUnit = ds.getTimeUnit();
+    const std::string& cUnit = ds.getCostUnit();
+
     // ── Header ────────────────────────────────────────────────────────────
     std::cout << "\n=== " << title << " ===\n"
-              << "Additional budget  : $" << static_cast<long long>(budget)       << '\n'
-              << "Total time saving  : "  << totalTimeSaving                      << " week(s)\n"
-              << "Total extra cost   : $" << static_cast<long long>(totalExtraCost) << '\n';
+              << "Additional budget  : " << static_cast<long long>(budget)         << ' ' << cUnit << "(s)\n"
+              << "Total time saving  : " << totalTimeSaving                        << ' ' << tUnit << "(s)\n"
+              << "Total extra cost   : " << static_cast<long long>(totalExtraCost) << ' ' << cUnit << "(s)\n";
 
     if (m_results.empty())
         return;
@@ -76,21 +79,21 @@ void Optimize::printResults(const std::string& title) const
             std::cout << "  "
                       << std::left  << std::setw(W) << rName
                       << ": " << std::right << std::setw(3) << ar->N
-                      << " week(s) work planned"
+                      << ' ' << tUnit << "(s) work planned"
                       << "  | " << std::right << std::setw(3) << ar->selectedI
                       << " unit(s) allocated"
                       << "  |  time saving: " << std::setw(3) << ar->selectedSaving
-                      << " week(s)"
-                      << "  |  extra cost: $"
-                      << static_cast<long long>(ar->selectedCost) << '\n';
+                      << ' ' << tUnit << "(s)"
+                      << "  |  extra cost: "
+                      << static_cast<long long>(ar->selectedCost) << ' ' << cUnit << "(s)\n";
 
             projSaving    += ar->selectedSaving;
             projExtraCost += ar->selectedCost;
         }
 
         std::cout << "  " << std::string(68, '-') << '\n'
-                  << "  Project time saving : " << projSaving << " week(s)\n"
-                  << "  Project extra cost  : $"
-                  << static_cast<long long>(projExtraCost) << '\n';
+                  << "  Project time saving : " << projSaving << ' ' << tUnit << "(s)\n"
+                  << "  Project extra cost  : "
+                  << static_cast<long long>(projExtraCost) << ' ' << cUnit << "(s)\n";
     }
 }

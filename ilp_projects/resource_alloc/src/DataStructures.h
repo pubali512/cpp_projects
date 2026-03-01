@@ -82,9 +82,15 @@ public:
     /// Clears all stored resources and projects (frees memory).
     void clear();
 
-    const std::map<int, Resource*>& getResources()      const { return m_resources;       }
-    const std::map<int, Project*>&  getProjects()        const { return m_projects;         }
-    double                          getAdditionalBudget() const { return m_additionalBudget; }
+    const std::map<int, Resource*>& getResources()       const { return m_resources;        }
+    const std::map<int, Project*>&  getProjects()         const { return m_projects;          }
+    double                          getAdditionalBudget() const { return m_additionalBudget;  }
+
+    /// Unit label for time values (e.g. "week", "cycle").  Default: "week".
+    const std::string& getTimeUnit() const { return m_timeUnit; }
+
+    /// Unit label for cost values (e.g. "dollar", "gate").  Default: "dollar".
+    const std::string& getCostUnit() const { return m_costUnit; }
 
     Resource* getResourceById(int resourceId) const;
     Project*  getProjectById(int projectId) const;
@@ -107,4 +113,6 @@ private:
     std::map<int, Resource*> m_resources;
     std::map<int, Project*>  m_projects;
     double                   m_additionalBudget{0.0};
+    std::string              m_timeUnit{"week"};
+    std::string              m_costUnit{"dollar"};
 };
