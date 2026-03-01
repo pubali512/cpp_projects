@@ -42,4 +42,49 @@ This optimization problem can be applied for different areas. For example, inste
 # Formulation of a greedy heuristic 
 
 - For all projects, compute the cost-benefit ratio for each X_RT_i. This value is given by additional costs per unit week saved (i.e., C_RT_i / S_RT_i).
-- Select x_RT_i with the lowest cost-benefit ratio. If there are multiple such resources across all projects, then select the one with the lowest cost (and remove all other candidates for the same (R,T) pair). Then reduce C_additionalBudget by C_RT_i. Repeat this procedure till there is no extra budget available. 
+ - Select x_RT_i with the lowest cost-benefit ratio. If there are multiple such resources across all projects, then select the one with the lowest cost (and remove all other candidates for the same (R,T) pair). Then reduce C_additionalBudget by C_RT_i. Repeat this procedure till there is no extra budget available. 
+
+---
+
+## Build & Tools
+
+- Compiler / toolchain: a C++17-compatible compiler (Clang or MSVC are supported). The project is configured with CMake and has been built and tested with Clang + Ninja on Windows.
+- Build system: CMake (>= 3.18) and Ninja (or your preferred generator).
+- Typical build commands (from repository root):
+
+```powershell
+cmake -S . -B build -G Ninja
+cmake --build build --config Release
+```
+
+The produced executable is `resource_alloc` (under `build/.../src/`).
+
+## Project structure
+
+- `src/`
+	- `main.cpp` — program entry point and CLI handling (`resource_alloc <input_file> [timeout_seconds]`).
+	- `DataStructures.h/.cpp` — input parser and in-memory model:
+		- `Resource` — resource metadata (name, cost, other attributes).
+		- `Project` — project requirements: map of resource ID → required units.
+		- `DataStore` — singleton that loads the input file and stores resources, projects, additional budget, and the optional `# GENERAL` values `time_unit` and `cost_unit`.
+	- `Optimize.h/.cpp` — abstract base class for optimizers. Exposes the shared `AllocResult` structure, `timeSaving()`/`extraCost()` helpers, and a common `printResults()` method.
+	- `OptimizeByHeuristic.h/.cpp` — greedy heuristic implementation that populates the inherited `m_results` map and calls `printResults()`.
+	- `OptimizeByILP.h/.cpp` — ILP integration: generates an LP file for `lp_solve`, invokes the solver, parses its output into `m_results`, then prints results via the base class.
+
+- `external/lp_solve/` — expected location for the `lp_solve` binary (not included). By default CMake bakes the path `external/lp_solve/lp_solve.exe` into the binary; see `src/CMakeLists.txt`.
+- Example inputs: `EXAMPLE.md`, `EXAMPLE hwdesign.md` — demonstrate `# GENERAL`, `# RESOURCE`, `# PROJECT`, and `# ADDITIONAL_BUDGET` sections.
+
+## Using the external `lp_solve` tool
+
+- The program generates a temporary `.lp` file and invokes `lp_solve` to compute an optimal (ILP) solution. The compiled binary embeds the `LP_SOLVE_EXE` path at build time (see `src/CMakeLists.txt`).
+- Runtime usage (example):
+
+```powershell
+# Run heuristic and ILP. Timeout (seconds) is optional; default is 300.
+.\build\...\src\resource_alloc.exe .\EXAMPLE.md 300
+```
+
+- If `lp_solve` cannot be found at the baked path, either place `lp_solve.exe` at `external/lp_solve/lp_solve.exe` or update the path in `src/CMakeLists.txt` and re-run CMake to reconfigure.
+- Temporary files created during ILP solve: `_resource_alloc_tmp.lp` (the LP file) and `_resource_alloc_tmp_out.txt` (solver stdout) — these are left in the working directory for inspection.
+
+If you'd like, I can add a short `docs/BUILD.md` with platform-specific instructions or make the `lp_solve` path configurable via a CMake option.
