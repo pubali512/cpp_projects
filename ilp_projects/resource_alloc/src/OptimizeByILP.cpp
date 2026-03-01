@@ -2,12 +2,23 @@
 
 #include "DataStructures.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#if defined(_WIN32)
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#endif
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal helpers
@@ -228,4 +239,216 @@ std::string OptimizeByILP::generateBinaryDeclarations() const
     oss << ";\n";
 
     return oss.str();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OptimizeByILP::solve
+// ─────────────────────────────────────────────────────────────────────────────
+void OptimizeByILP::solve(int timeoutSeconds) const
+{
+    const std::string lpPath  = "_resource_alloc_tmp.lp";
+    const std::string outPath = "_resource_alloc_tmp_out.txt";
+
+    // Delete temp files if they already exist
+    std::remove(lpPath.c_str());
+    std::remove(outPath.c_str());
+
+    std::cout << "Generating LP file: " << lpPath << " ...\n";
+    generateLPFile(lpPath);
+
+#if defined(_WIN32)
+    // Create the output file with an inheritable handle so CreateProcess can
+    // redirect lp_solve's stdout/stderr into it.
+    SECURITY_ATTRIBUTES sa{};
+    sa.nLength        = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+
+    HANDLE hOut = CreateFileA(
+        outPath.c_str(),
+        GENERIC_WRITE, FILE_SHARE_READ, &sa,
+        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr
+    );
+    if (hOut == INVALID_HANDLE_VALUE)
+        throw std::runtime_error("solve: cannot create output file: " + outPath);
+
+    // Build command line: "<exe>" -lp "<lpfile>"
+    const std::string cmd =
+        "\"" LP_SOLVE_EXE "\" -lp \"" + lpPath + "\"";
+    std::vector<char> cmdBuf(cmd.begin(), cmd.end());
+    cmdBuf.push_back('\0');
+
+    STARTUPINFOA si{};
+    si.cb         = sizeof(STARTUPINFOA);
+    si.dwFlags    = STARTF_USESTDHANDLES;
+    si.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
+    si.hStdOutput = hOut;
+    si.hStdError  = hOut;
+
+    PROCESS_INFORMATION pi{};
+    const BOOL launched = CreateProcessA(
+        nullptr, cmdBuf.data(),
+        nullptr, nullptr,
+        TRUE,   // bInheritHandles
+        0, nullptr, nullptr,
+        &si, &pi
+    );
+    CloseHandle(hOut); // child has its own copy; we don't need ours
+
+    if (!launched)
+        throw std::runtime_error(
+            "solve: failed to launch lp_solve (WinError " +
+            std::to_string(GetLastError()) + ")");
+
+    std::cout << "Running lp_solve (timeout: " << timeoutSeconds << "s) ...\n";
+
+    const DWORD waitMs     = static_cast<DWORD>(timeoutSeconds) * 1000u;
+    const DWORD waitResult = WaitForSingleObject(pi.hProcess, waitMs);
+
+    if (waitResult == WAIT_TIMEOUT)
+    {
+        TerminateProcess(pi.hProcess, 1);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        throw std::runtime_error(
+            "lp_solve timed out after " + std::to_string(timeoutSeconds) + "s");
+    }
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+#else
+    // POSIX fallback: shell redirect
+    const std::string cmd =
+        std::string(LP_SOLVE_EXE) +
+        " -lp \"" + lpPath + "\" > \"" + outPath + "\" 2>&1";
+    const int ret = std::system(cmd.c_str());
+    (void)ret;
+#endif
+
+    // Read solver output into a string
+    std::ifstream outFile(outPath);
+    if (!outFile.is_open())
+        throw std::runtime_error("solve: cannot read solver output: " + outPath);
+
+    const std::string content(
+        std::istreambuf_iterator<char>(outFile),
+        std::istreambuf_iterator<char>{}
+    );
+
+    parseAndPrintResults(content);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OptimizeByILP::parseAndPrintResults
+// ─────────────────────────────────────────────────────────────────────────────
+void OptimizeByILP::parseAndPrintResults(const std::string& solverOutput) const
+{
+    // ── Infeasibility check ───────────────────────────────────────────────────
+    std::string lower = solverOutput;
+    std::transform(lower.begin(), lower.end(), lower.begin(),
+                   [](unsigned char c){ return static_cast<char>(std::tolower(c)); });
+
+    if (lower.find("infeasible") != std::string::npos)
+    {
+        std::cout << "\n=== LP Solver Result: INFEASIBLE ===\n"
+                  << "No feasible solution exists within the given constraints.\n";
+        return;
+    }
+
+    // ── Parse objective value ───────────────────────────────────────────────
+    double objValue = 0.0;
+    {
+        const std::string tok = "Value of objective function: ";
+        const auto pos = solverOutput.find(tok);
+        if (pos == std::string::npos)
+        {
+            std::cout << "\n=== Raw solver output ===\n" << solverOutput << '\n';
+            return;
+        }
+        try { objValue = std::stod(solverOutput.substr(pos + tok.size())); }
+        catch (...) {}
+    }
+
+    // ── Build name → AllocVar* lookup ─────────────────────────────────────────
+    const auto allVars = buildVarTable();
+    std::map<std::string, const AllocVar*> varLookup;
+    for (const auto& v : allVars)
+        varLookup[v.name] = &v;
+
+    // ── Parse active (=1) variables from solver output ────────────────────
+    // lp_solve only prints non-zero variables; each line: "<name>    <value>"
+    std::vector<const AllocVar*> active;
+    {
+        std::istringstream ss(solverOutput);
+        std::string line;
+        while (std::getline(ss, line))
+        {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (line.size() < 3 || line[0] != 'x') continue;
+
+            std::istringstream ls(line);
+            std::string name; double val = 0.0;
+            ls >> name >> val;
+            if (val > 0.5)
+            {
+                const auto it = varLookup.find(name);
+                if (it != varLookup.end())
+                    active.push_back(it->second);
+            }
+        }
+    }
+
+    // ── Group active vars by project ──────────────────────────────────────
+    std::map<int, std::vector<const AllocVar*>> byProject;
+    for (const AllocVar* v : active)
+        byProject[v->projectId].push_back(v);
+
+    // ── Print ─────────────────────────────────────────────────────────────────────
+    const DataStore& ds = DataStore::getInstance();
+    const int W = 24; // column width for resource names
+
+    std::cout << "\n=== LP Solver Results ===\n"
+              << "Status  : OPTIMAL\n"
+              << "Objective (total time saving): "
+              << static_cast<long long>(objValue) << " week(s)\n";
+
+    double grandExtraCost  = 0.0;
+
+    for (const auto& [pid, allocList] : byProject)
+    {
+        std::cout << "\n--- Project " << pid << " ---\n";
+
+        int    projSaving   = 0;
+        double projExtraCost = 0.0;
+
+        for (const AllocVar* v : allocList)
+        {
+            const Resource* r = ds.getResourceById(v->resourceId);
+            const std::string rName = r ? r->getName()
+                                        : ("resource_" + std::to_string(v->resourceId));
+
+            const int    S     = timeSaving(v->N, v->i);
+            const double extra = v->costPerUnit * static_cast<double>(v->i - 1);
+
+            projSaving    += S;
+            projExtraCost += extra;
+
+            std::cout << "  "
+                      << std::left << std::setw(W) << rName
+                      << ": " << std::right << std::setw(3) << v->i << " unit(s) allocated"
+                      << "  |  time saving: " << std::setw(3) << S << " week(s)"
+                      << "  |  extra cost: $" << static_cast<long long>(extra) << "\n";
+        }
+
+        std::cout << "  " << std::string(68, '-') << "\n"
+                  << "  Project time saving : " << projSaving   << " week(s)\n"
+                  << "  Project extra cost  : $"
+                  << static_cast<long long>(projExtraCost) << "\n";
+
+        grandExtraCost  += projExtraCost;
+    }
+
+    std::cout << "\n" << std::string(70, '=') << "\n"
+              << "Total time saving    : " << static_cast<long long>(objValue) << " week(s)\n"
+              << "Total additional cost: $" << static_cast<long long>(grandExtraCost) << "\n";
 }

@@ -6,11 +6,14 @@
 
 int main(int argc, char* argv[])
 {
-    if (argc < 3)
+    if (argc < 2)
     {
-        std::cerr << "Usage: resource_alloc <input_file> <output_lp_file>\n";
+        std::cerr << "Usage: resource_alloc <input_file> [timeout_seconds]\n"
+                  << "  timeout_seconds  default: 300\n";
         return 1;
     }
+
+    const int timeout = (argc >= 3) ? std::stoi(argv[2]) : 300;
 
     try
     {
@@ -20,10 +23,8 @@ int main(int argc, char* argv[])
         // ── Print Resources ───────────────────────────────────────────────────
         std::cout << "=== Resources (" << ds.getResources().size() << ") ===\n";
         for (const auto& [id, r] : ds.getResources())
-        {
-            std::cout << "  [" << id << "] name=" << r->getName()
-                      << "  cost=" << r->getCost() << '\n';
-        }
+            std::cout << "  [" << id << "] " << r->getName()
+                      << "  cost=$" << r->getCost() << "/week\n";
 
         // ── Print Projects ────────────────────────────────────────────────────
         std::cout << "\n=== Projects (" << ds.getProjects().size() << ") ===\n";
@@ -34,18 +35,14 @@ int main(int argc, char* argv[])
             {
                 const auto* r = ds.getResourceById(rid);
                 if (r)
-                {
-                    std::cout << "    resource " << r->getName() << " -> " << units << " units\n";
-                }
+                    std::cout << "    " << r->getName() << " -> " << units << " weeks\n";
             }
         }
+        std::cout << "\nAdditional budget: $" << ds.getAdditionalBudget() << '\n';
 
-        std::cout << "\nAdditional budget: " << ds.getAdditionalBudget() << '\n';
-
-        // ── Generate .lp file ─────────────────────────────────────────────────
+        // ── Solve ─────────────────────────────────────────────────────────────────
         OptimizeByILP optimizer;
-        optimizer.generateLPFile(argv[2]);
-        std::cout << "\nLP file written to: " << argv[2] << '\n';
+        optimizer.solve(timeout);
     }
     catch (const std::exception& ex)
     {

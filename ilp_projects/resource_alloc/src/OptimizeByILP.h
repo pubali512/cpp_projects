@@ -21,7 +21,7 @@
 //
 //   Objective              : maximise  Σ_{R,T,i}  S_RT_i · X_RT_i
 //   Non-budget constraints : Σ_i X_RT_i = 1  for every (R,T)  [exactly one level]
-//   Budget constraint      : Σ_{R,T,i} C_RT_i · X_RT_i  ≤  C_budget − C_min
+//   Budget constraint      : Σ_{R,T,i} C_RT_i · X_RT_i  ≤  C_additionalBudget
 // ─────────────────────────────────────────────────────────────────────────────
 class OptimizeByILP
 {
@@ -31,6 +31,12 @@ public:
     /// Build all sections and write the complete .lp file to @p outputPath.
     /// Throws std::runtime_error if the file cannot be created.
     void generateLPFile(const std::string& outputPath) const;
+
+    /// Generate a temporary .lp file, run lp_solve, wait up to @p timeoutSeconds,
+    /// then parse the solver output and print human-readable results to stdout.
+    /// Temporary files are always deleted before creation and left on disk for
+    /// inspection afterwards.
+    void solve(int timeoutSeconds = 300) const;
 
 private:
     // ── Internal variable descriptor ──────────────────────────────────────────
@@ -66,4 +72,7 @@ private:
     /// Returns the binary-variable declaration section.
     ///   bin x_r1_p1_1, x_r1_p1_2, ...;
     std::string generateBinaryDeclarations() const;
+
+    /// Parse raw lp_solve stdout and print a human-readable summary.
+    void parseAndPrintResults(const std::string& solverOutput) const;
 };
