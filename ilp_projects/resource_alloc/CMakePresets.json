@@ -1,0 +1,72 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "llvm-clang-debug",
+            "displayName": "LLVM Clang – Debug",
+            "description": "Standalone LLVM Clang (C:\\Program Files\\LLVM\\bin), Debug build",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe",
+                "CMAKE_BUILD_TYPE":   "Debug"
+            }
+        },
+        {
+            "name": "llvm-clang-release",
+            "displayName": "LLVM Clang – Release",
+            "description": "Standalone LLVM Clang (C:\\Program Files\\LLVM\\bin), Release build",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "C:/Program Files/LLVM/bin/clang++.exe",
+                "CMAKE_BUILD_TYPE":   "Release"
+            }
+        },
+        {
+            "name": "vs-clang-debug",
+            "displayName": "VS Clang – Debug",
+            "description": "VS-bundled Clang (C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\Llvm\\x64\\bin), Debug build",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/Llvm/x64/bin/clang++.exe",
+                "CMAKE_BUILD_TYPE":   "Debug"
+            }
+        },
+        {
+            "name": "vs-clang-release",
+            "displayName": "VS Clang – Release",
+            "description": "VS-bundled Clang (C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\Llvm\\x64\\bin), Release build",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/Llvm/x64/bin/clang++.exe",
+                "CMAKE_BUILD_TYPE":   "Release"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "llvm-clang-debug",
+            "configurePreset": "llvm-clang-debug"
+        },
+        {
+            "name": "llvm-clang-release",
+            "configurePreset": "llvm-clang-release"
+        },
+        {
+            "name": "vs-clang-debug",
+            "configurePreset": "vs-clang-debug"
+        },
+        {
+            "name": "vs-clang-release",
+            "configurePreset": "vs-clang-release"
+        }
+    ]
+}
