@@ -1,38 +1,37 @@
 
 # RESOURCE
 name = system_architect 
-cost = 1000 
+cost = 600 
 
 # RESOURCE
 name = software_architect 
-cost = 800
+cost = 600
 
 # RESOURCE
 name = developer
-cost = 500
+cost = 400
 
 # RESOURCE
 name = tester
-cost = 400
+cost = 350
 
 
 # PROJECT 
-system_architect  = 5 
-software_architect= 5
-developer         = 10
-tester            = 15
+system_architect  = 25 
+software_architect= 25
+developer         = 6
+tester            = 4
 
 # PROJECT 
-system_architect  = 8 
-software_architect= 10
-developer         = 20
-tester            = 25
+system_architect  = 16
+software_architect= 14
+developer         = 8
+tester            = 6
 
 # PROJECT 
-system_architect  = 6
-software_architect= 10
-developer         = 15
-tester            = 20
+software_architect= 20
+developer         = 5
+tester            = 10
 
 # PROJECT 
 system_architect  = 3
@@ -42,4 +41,4 @@ tester            = 15
 
 
 # ADDITIONAL_BUDGET 
-value = 15000
+value = 25000

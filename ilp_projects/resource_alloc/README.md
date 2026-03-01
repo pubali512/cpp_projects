@@ -16,7 +16,6 @@
 This optimization problem can be applied for different areas. For example, instead of projects we can think for hardware modules which are to implemented. Each module can be implemented using a set of hardware resources (e.g., adders, multiplers, logical operators etc.). Each resource has a certain cost (number of logic gates) and the execution time of the module can be reduced by using more resources. The goal is to minimize the total execution time within a given budget of additional gates.
 
 
-
 # Formulation of the optimization Problem as ILP
 
 - For a given task T, and for a given resource of type R, we create variables X_RT_1 to X_RT_N where N is maximum number of R resoures that can be allocated to T. X_RT_i is to be set 1 if i resources of type R are allocated to task T. Otherwise, it would be 0. 
@@ -40,12 +39,7 @@ This optimization problem can be applied for different areas. For example, inste
 - For example, if there are 10 weeks of development work and 4 developers are allocated, then the duration of the development task is ceil(10/4) = 3 weeks. The number of additional developers allocated is 4 - 1 = 3. If the cost per week for a developer is $500, then the total additional cost is (3 * 500 * 3) = $4500. 
 
 
-
-
 # Formulation of a greedy heuristic 
 
-- For all projects, compute the cost-benefit ratio for each X_RT_i where N is number of planned weeks for resource R for task/project T. This value is given by additional costs per unit week saved. 
-- If i resources are allocated, then additional cost is C_R * i
-
-- There is additional fund which can be allocated to speed up the project. Let us call this C_extra (i.e., extra budget available to speed-up project execution).
-- Select x_R_T with the lowest cost. If there are multiple such resources across all projects, then select the one with the highest benefit if it is completed in a week (i.e, if the original number of weeks for X_R_T was N, then the benefit is N -1). Then allocate resources for x_P_T so that it is completed in 1 week (minimum time) and reduce C_extra by the cost. Repeat this procedure till there is no extra budget available. 
+- For all projects, compute the cost-benefit ratio for each X_RT_i. This value is given by additional costs per unit week saved (i.e., C_RT_i / S_RT_i).
+- Select x_RT_i with the lowest cost-benefit ratio. If there are multiple such resources across all projects, then select the one with the lowest cost (and remove all other candidates for the same (R,T) pair). Then reduce C_additionalBudget by C_RT_i. Repeat this procedure till there is no extra budget available. 

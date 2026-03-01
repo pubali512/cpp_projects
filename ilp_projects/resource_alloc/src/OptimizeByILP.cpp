@@ -42,6 +42,17 @@ int timeSaving(int N, int i)
     return N - static_cast<int>(std::ceil(static_cast<double>(N) / static_cast<double>(i)));
 }
 
+/// Additional cost of allocating i resources to a task that originally needs N weeks.
+/// The task finishes in ceil(N/i) weeks; (i-1) extra resources are hired for that duration.
+/// C_RT_i = ceil(N/i) * C_R * (i - 1)
+/// For i=1 this is 0 (no extra resources hired).
+double extraCost(int N, int i, double cR)
+{
+    if (i <= 1) return 0.0;
+    const double duration = std::ceil(static_cast<double>(N) / static_cast<double>(i));
+    return duration * cR * static_cast<double>(i - 1);
+}
+
 } // anonymous namespace
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -178,8 +189,10 @@ std::string OptimizeByILP::generateNonBudgetConstraints() const
     return oss.str();
 }
 
-// Budget constraint: Σ C_R·(i-1)·X_RT_i  ≤  C_additionalBudget
-// C_RT_i = C_R · (i-1)          (extra cost beyond baseline)
+// Budget constraint: Σ C_RT_i · X_RT_i  ≤  C_additionalBudget
+// New cost formula (README "Cost calculation"):
+//   C_RT_i = ceil(N/i) * C_R * (i - 1)
+//   i.e. the task finishes in ceil(N/i) weeks; (i-1) extra resources hired at rate C_R.
 // Terms with i=1 give coefficient 0 and are omitted.
 std::string OptimizeByILP::generateBudgetConstraint() const
 {
@@ -189,16 +202,16 @@ std::string OptimizeByILP::generateBudgetConstraint() const
 
     std::ostringstream oss;
     oss << "/* Budget constraint\n"
-        << "   C_extra  (budget available to speed up)      = " << fmtDouble(cExtra)    << "\n"
-        << "   Extra cost per variable: C_RT_i = C_R * (i - 1) */\n";
+        << "   C_extra (additional budget available)   = " << fmtDouble(cExtra) << "\n"
+        << "   C_RT_i = ceil(N/i) * C_R * (i - 1) */\n";
 
     bool anyTerm = false;
     std::ostringstream lhs;
     for (const auto& v : vars)
     {
-        if (v.i == 1) continue;        // coefficient = C_R*(1-1) = 0
+        if (v.i == 1) continue;        // coefficient = 0
 
-        const double coeff = v.costPerUnit * static_cast<double>(v.i - 1);
+        const double coeff = extraCost(v.N, v.i, v.costPerUnit);
         if (!anyTerm)
             lhs << "budget: ";
         else
@@ -427,7 +440,7 @@ void OptimizeByILP::parseAndPrintResults(const std::string& solverOutput) const
                                         : ("resource_" + std::to_string(v->resourceId));
 
             const int    S     = timeSaving(v->N, v->i);
-            const double extra = v->costPerUnit * static_cast<double>(v->i - 1);
+            const double extra = extraCost(v->N, v->i, v->costPerUnit);
 
             projSaving    += S;
             projExtraCost += extra;
