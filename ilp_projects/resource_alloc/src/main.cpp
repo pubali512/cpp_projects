@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include "DataStructures.h"
+#include "OptimizeByHeuristic.h"
 #include "OptimizeByILP.h"
 
 int main(int argc, char* argv[])
@@ -40,7 +41,11 @@ int main(int argc, char* argv[])
         }
         std::cout << "\nAdditional budget: $" << ds.getAdditionalBudget() << '\n';
 
-        // ── Solve ─────────────────────────────────────────────────────────────────
+        // ── Heuristic ────────────────────────────────────────────────────────
+        OptimizeByHeuristic heuristic;
+        heuristic.solve();
+
+        // ── ILP (exact) ──────────────────────────────────────────────────────
         OptimizeByILP optimizer;
         optimizer.solve(timeout);
     }

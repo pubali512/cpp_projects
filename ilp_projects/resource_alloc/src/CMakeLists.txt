@@ -4,6 +4,7 @@ add_executable(resource_alloc
     main.cpp
     DataStructures.cpp
     OptimizeByILP.cpp
+    OptimizeByHeuristic.cpp
 )
 
 target_include_directories(resource_alloc
