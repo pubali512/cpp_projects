@@ -1,7 +1,8 @@
 # Ignore build artifacts and IDE files for CMake/C++ projects
 
-# Generated LP files 
+# Generated LP and output files 
 *.lp
+_resource_alloc*.txt
 
 # Ignore contents of external/lp_solve/
 external/lp_solve/**
