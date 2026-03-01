@@ -3,6 +3,9 @@
 # Generated LP files 
 *.lp
 
+# Ignore contents of external/lp_solve/
+external/lp_solve/**
+
 # Build directories
 /build/
 /build-*/

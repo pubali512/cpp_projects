@@ -175,21 +175,10 @@ std::string OptimizeByILP::generateBudgetConstraint() const
 {
     const DataStore& ds   = DataStore::getInstance();
     const auto       vars = buildVarTable();
-
-    // Compute C_min
-    double cMin = 0.0;
-    for (const auto& [pid, pPtr] : ds.getProjects())
-        for (const auto& [rid, unitsDouble] : pPtr->getResourceCosts())
-            if (const Resource* r = ds.getResourceById(rid))
-                cMin += unitsDouble * r->getCost();
-
-    const double cBudget = ds.getAdditionalBudget();
-    const double cExtra  = cBudget - cMin;
+    const double cExtra   = ds.getAdditionalBudget();
 
     std::ostringstream oss;
     oss << "/* Budget constraint\n"
-        << "   C_min (baseline cost, one resource per phase) = " << fmtDouble(cMin)     << "\n"
-        << "   C_budget (total available)                   = " << fmtDouble(cBudget)   << "\n"
         << "   C_extra  (budget available to speed up)      = " << fmtDouble(cExtra)    << "\n"
         << "   Extra cost per variable: C_RT_i = C_R * (i - 1) */\n";
 
