@@ -82,8 +82,9 @@ public:
     /// Clears all stored resources and projects (frees memory).
     void clear();
 
-    const std::map<int, Resource*>& getResources() const { return m_resources; }
-    const std::map<int, Project*>&  getProjects()  const { return m_projects;  }
+    const std::map<int, Resource*>& getResources()      const { return m_resources;       }
+    const std::map<int, Project*>&  getProjects()        const { return m_projects;         }
+    double                          getAdditionalBudget() const { return m_additionalBudget; }
 
     Resource* getResourceById(int resourceId) const;
     Project*  getProjectById(int projectId) const;
@@ -105,4 +106,5 @@ private:
 
     std::map<int, Resource*> m_resources;
     std::map<int, Project*>  m_projects;
+    double                   m_additionalBudget{0.0};
 };

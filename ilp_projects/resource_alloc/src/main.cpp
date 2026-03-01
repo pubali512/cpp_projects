@@ -2,12 +2,13 @@
 #include <stdexcept>
 
 #include "DataStructures.h"
+#include "OptimizeByILP.h"
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
+    if (argc < 3)
     {
-        std::cerr << "Usage: resource_alloc <input_file>\n";
+        std::cerr << "Usage: resource_alloc <input_file> <output_lp_file>\n";
         return 1;
     }
 
@@ -38,6 +39,13 @@ int main(int argc, char* argv[])
                 }
             }
         }
+
+        std::cout << "\nAdditional budget: " << ds.getAdditionalBudget() << '\n';
+
+        // ── Generate .lp file ─────────────────────────────────────────────────
+        OptimizeByILP optimizer;
+        optimizer.generateLPFile(argv[2]);
+        std::cout << "\nLP file written to: " << argv[2] << '\n';
     }
     catch (const std::exception& ex)
     {

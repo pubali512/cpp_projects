@@ -98,6 +98,8 @@ void DataStore::clear()
 
     for (auto& [id, ptr] : m_projects) delete ptr;
     m_projects.clear();
+
+    m_additionalBudget = 0.0;
 }
 
 void DataStore::loadFromFile(const std::string& filepath)
@@ -107,7 +109,7 @@ void DataStore::loadFromFile(const std::string& filepath)
         throw std::runtime_error("DataStore::loadFromFile – cannot open file: " + filepath);
 
     // ── Section state ─────────────────────────────────────────────────────────
-    enum class Section { None, Resource, Project };
+    enum class Section { None, Resource, Project, AdditionalBudget };
 
     Section current = Section::None;
 
@@ -161,6 +163,12 @@ void DataStore::loadFromFile(const std::string& filepath)
             current = Section::Project;
             continue;
         }
+        if (trimmed == "# ADDITIONAL_BUDGET")
+        {
+            finalizeSection();
+            current = Section::AdditionalBudget;
+            continue;
+        }
 
         // Attribute / entry line
         auto [key, val] = splitKeyValue(trimmed);
@@ -174,6 +182,11 @@ void DataStore::loadFromFile(const std::string& filepath)
         else if (current == Section::Project)
         {
             try   { projectEntries[key] = std::stod(val); }
+            catch (...) { /* malformed numeric – skip */ }
+        }
+        else if (current == Section::AdditionalBudget && key == "value")
+        {
+            try   { m_additionalBudget = std::stod(val); }
             catch (...) { /* malformed numeric – skip */ }
         }
     }

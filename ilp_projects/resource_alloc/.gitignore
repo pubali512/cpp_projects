@@ -1,5 +1,8 @@
 # Ignore build artifacts and IDE files for CMake/C++ projects
 
+# Generated LP files 
+*.lp
+
 # Build directories
 /build/
 /build-*/
