@@ -30,7 +30,7 @@ public:
     {
         int    resourceId;
         int    projectId;
-        int    N;               ///< Base weeks required  (N_RT)
+        int    N;               ///< Base time units required  (N_RT)
         double costPerUnit;     ///< Cost rate C_R
         int    selectedI{1};    ///< Chosen level  (baseline = 1, no extra cost)
         double selectedCost{0.0};   ///< C_RT_selectedI
