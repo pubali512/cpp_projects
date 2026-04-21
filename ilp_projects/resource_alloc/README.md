@@ -1,90 +1,152 @@
-# Basic Formulation of the Problem 
+# Resource Allocation Optimizer
 
-- A company executes a set of projects. Each project requires a certain human resources. For example, each project requires system architects, software architects, developers, testers. Each resource type has a certain cost per week. For example, system architect costs $1000 per week, software architect costs $800 per week, developer costs $500 per week, tester costs $300 per week. These projects are executed in a sequential manner, i.e., project 2 starts after project 1 is completed, project 3 starts after project 2 is completed and so on.
+## Project Overview
 
-- For each project, a certain amount of work is planned for each resource type. For example, for project 1, 5 weeks of system architecture work is planned, 5 weeks of software architecture work is planned, 10 weeks of development work is planned, and 5 weeks of testing work is planned. The total duration of the project is the sum of the durations of the tasks for each resource type. For example, if project 1 requires 5 weeks of system architecture work, 5 weeks of software architecture work, 10 weeks of development work, and 5 weeks of testing work, then the total duration of project 1 is 5 + 5 + 10 + 5 = 25 weeks.
+A C++17 resource allocation optimizer that minimizes total project duration within a given additional budget. The tool solves the optimization problem using two independent approaches and compares the results:
 
-- We can reduce the duration of a project by increasing the amount of resources allocated to it. For example, if a project requires 10 weeks of development work, and we allocate 2 developers to it, then the duration of the development task for that project will be reduced to 5 weeks. This is because the work can be divided among the developers. However, there is a limit to how much we can reduce the duration of a project by allocating more resources to it. For example, if a project requires 10 weeks of development work, and we allocate 10 developers to it, then the duration of the development task for that project will be reduced to 1 week. However, it cannot be reduced further because the minimum hiring duration is 1 week.
+1. **Greedy Heuristic** — Enumerates all possible (resource, project, allocation-level) triples, sorts them by cost-effectiveness ratio, and greedily assigns resources within the budget.
+2. **Integer Linear Programming (ILP)** — Generates an LP-format problem file with binary decision variables, an objective function maximizing time savings, equality and budget constraints, and solves it using the external `lp_solve` solver.
 
-- There is 1 resource of each resource type always available. There is a infinite pool of additional resources available but hiring each new resource increases the cost because the hiring is done on a short-term basis. For example, suppose there were 8 weeks allocated for a developer for a project (e.g., 8 * 500$). Now suppose, 1 more developer is added. The task can be completed within 4 weeks (i.e., 4 weeks saving). But each additional developer hired on short term basis costs double. So each additional developer costs additional 500$ for the duration of the work. So the first developer for 4 weeks cost 2000$ but the second developer costs 4000$. So there is a cost increase of 2000$ for a saving of 4 weeks. 
+### Problem Description
 
-- The company has a certain additional budget that can be allocated to speed up the project execution. We want to find the optimal amount of additional resources to hire such that the total duration for the set of projects is minimized within the given additional budget.
+A company executes a set of sequential projects, each requiring different resource types (e.g., system architects, developers, testers) with per-week costs. Adding duplicate resources shortens task duration ($\lceil N/i \rceil$ weeks for $i$ resources) but each additional hire costs double. Given an additional budget, the goal is to find the optimal resource allocation that minimizes total project duration.
 
+This formulation is generalizable — for example, it can also model hardware module design where resources are hardware components (adders, multipliers, ALUs) with gate-count costs, and the goal is to minimize execution time within a gate budget.
 
-## NOTE 
+### Main Features
 
-This optimization problem can be applied for different areas. For example, instead of projects we can think for hardware modules which are to implemented. Each module can be implemented using a set of hardware resources (e.g., adders, multiplers, logical operators etc.). Each resource has a certain cost (number of logic gates) and the execution time of the module can be reduced by using more resources. The goal is to minimize the total execution time within a given budget of additional gates.
+- **Dual optimization** — Runs both a greedy heuristic and an exact ILP solver, allowing comparison of approximate vs. optimal solutions
+- **ILP formulation** — Binary decision variables $X_{RT_i}$, objective to maximize $\sum S_{RT_i} \cdot X_{RT_i}$, with equality and budget constraints
+- **Greedy heuristic** — Cost-benefit ratio sorting with greedy selection
+- **Configurable input** — Custom Markdown-like input format with `# GENERAL`, `# RESOURCE`, `# PROJECT`, and `# ADDITIONAL_BUDGET` sections
+- **Detailed output** — Per-project breakdowns showing resource allocation, time savings, and costs
+- **Cross-platform** — Windows native process management (Win32 API) with POSIX fallback
 
+### ILP Formulation
 
-# Formulation of the optimization Problem as ILP
+For a given task $T$ and resource type $R$, binary variables $X_{RT_i}$ indicate whether $i$ resources of type $R$ are allocated to task $T$:
 
-- For a given task T, and for a given resource of type R, we create variables X_RT_1 to X_RT_N where N is maximum number of R resoures that can be allocated to T. X_RT_i is to be set 1 if i resources of type R are allocated to task T. Otherwise, it would be 0. 
+- **Objective:** Maximize $\sum S_{RT_i} \cdot X_{RT_i}$ where $S_{RT_i} = N - \lceil N/i \rceil$
+- **Equality constraint:** $\sum_i X_{RT_i} = 1$ for each $(R, T)$ pair
+- **Budget constraint:** $\sum C_{RT_i} \cdot X_{RT_i} \leq C_{\text{additionalBudget}}$ where $C_{RT_i} = \lceil N/i \rceil \times C_R \times (i - 1)$
 
-- The time saving if i resources are allocated to task T is N - ceil(N/i). For example, if 10 weeks of system architecture work is needed, and 4 architects are assigned to this task then this task can be done in 3 weeks (ceil(10/4)). Hence, time saving is 10 - 3 = 7. Let us call this S_RT_i (S for saving).
+## Technologies Used & Installation Instructions
 
-- We want to maximize Sum(S_RT_i * X_RT_i) for all R in resources and all T in tasks. 
+### Technologies
 
-## Constraints: 
+- **C++17**
+- **CMake** (>= 3.25) with **Ninja** generator
+- **Clang** compiler (LLVM or VS-bundled) — configured via CMake presets
+- **lp_solve** — External ILP solver binary (expected at `external/lp_solve/lp_solve.exe`)
+- **Win32 API** — For process management of lp_solve with timeout (POSIX fallback available)
 
-- At least one of X_RT_i must be one, i.e., Sum(X_RT_i) = 1 for a given resource R and a given task T 
-- The total cost of additional resources allocated must be within the additional budget, i.e., Sum(C_RT_i * X_RT_i) ≤ C_additionalBudget where C_RT_i is the additional cost of allocating i resources of type R to task T. 
+### Prerequisites
 
+- C++17-compatible compiler (Clang recommended, MSVC also supported)
+- CMake (>= 3.25) and Ninja
+- `lp_solve` binary placed at `external/lp_solve/lp_solve.exe`
 
-## Cost calculation 
+### Build
 
-- For X_RT_i for i is 0, because if there is no additional resource allocated, then there is no additional cost.
+Using CMake presets (recommended):
 
-- For X_RT_i the total additional cost is (duration of task * cost per week for the additional resource). Duration of the task is given by ceil(N/i) where N is the original duration of the task. For X_RT_i the number of additional resources allocated is i - 1 because there is already 1 resource available. So the total cost is (ceil(N/i) * C_R * (i - 1)) where C_R is the cost per week for resource type R. 
+```powershell
+cmake --preset llvm-clang-debug
+cmake --build --preset llvm-clang-debug
+```
 
-- For example, if there are 10 weeks of development work and 4 developers are allocated, then the duration of the development task is ceil(10/4) = 3 weeks. The number of additional developers allocated is 4 - 1 = 3. If the cost per week for a developer is $500, then the total additional cost is (3 * 500 * 3) = $4500. 
-
-
-# Formulation of a greedy heuristic 
-
-- For all projects, compute the cost-benefit ratio for each X_RT_i. This value is given by additional costs per unit week saved (i.e., C_RT_i / S_RT_i).
- - Select x_RT_i with the lowest cost-benefit ratio. If there are multiple such resources across all projects, then select the one with the lowest cost (and remove all other candidates for the same (R,T) pair). Then reduce C_additionalBudget by C_RT_i. Repeat this procedure till there is no extra budget available. 
-
----
-
-## Build & Tools
-
-- Compiler / toolchain: a C++17-compatible compiler (Clang or MSVC are supported). The project is configured with CMake and has been built and tested with Clang + Ninja on Windows.
-- Build system: CMake (>= 3.18) and Ninja (or your preferred generator).
-- Typical build commands (from repository root):
+Or manually:
 
 ```powershell
 cmake -S . -B build -G Ninja
 cmake --build build --config Release
 ```
 
-The produced executable is `resource_alloc` (under `build/.../src/`).
+The executable is produced at `build/<preset>/src/resource_alloc(.exe)`.
 
-## Project structure
+### Available CMake Presets
 
-- `src/`
-	- `main.cpp` — program entry point and CLI handling (`resource_alloc <input_file> [timeout_seconds]`).
-	- `DataStructures.h/.cpp` — input parser and in-memory model:
-		- `Resource` — resource metadata (name, cost, other attributes).
-		- `Project` — project requirements: map of resource ID → required units.
-		- `DataStore` — singleton that loads the input file and stores resources, projects, additional budget, and the optional `# GENERAL` values `time_unit` and `cost_unit`.
-	- `Optimize.h/.cpp` — abstract base class for optimizers. Exposes the shared `AllocResult` structure, `timeSaving()`/`extraCost()` helpers, and a common `printResults()` method.
-	- `OptimizeByHeuristic.h/.cpp` — greedy heuristic implementation that populates the inherited `m_results` map and calls `printResults()`.
-	- `OptimizeByILP.h/.cpp` — ILP integration: generates an LP file for `lp_solve`, invokes the solver, parses its output into `m_results`, then prints results via the base class.
+| Preset               | Compiler   | Config  | Generator |
+|----------------------|------------|---------|-----------|
+| `llvm-clang-debug`   | LLVM Clang | Debug   | Ninja     |
+| `llvm-clang-release` | LLVM Clang | Release | Ninja     |
+| `vs-clang-debug`     | VS Clang   | Debug   | Ninja     |
+| `vs-clang-release`   | VS Clang   | Release | Ninja     |
 
-- `external/lp_solve/` — expected location for the `lp_solve` binary (not included). By default CMake bakes the path `external/lp_solve/lp_solve.exe` into the binary; see `src/CMakeLists.txt`.
-- Example inputs: `EXAMPLE.md`, `EXAMPLE hwdesign.md` — demonstrate `# GENERAL`, `# RESOURCE`, `# PROJECT`, and `# ADDITIONAL_BUDGET` sections.
+## Usage Instructions
 
-## Using the external `lp_solve` tool
-
-- The program generates a temporary `.lp` file and invokes `lp_solve` to compute an optimal (ILP) solution. The compiled binary embeds the `LP_SOLVE_EXE` path at build time (see `src/CMakeLists.txt`).
-- Runtime usage (example):
+### Running the Optimizer
 
 ```powershell
-# Run heuristic and ILP. Timeout (seconds) is optional; default is 300.
-.\build\...\src\resource_alloc.exe .\EXAMPLE.md 300
+.\build\llvm-clang-debug\src\resource_alloc.exe <input_file> [timeout_seconds]
 ```
 
-- If `lp_solve` cannot be found at the baked path, either place `lp_solve.exe` at `external/lp_solve/lp_solve.exe` or update the path in `src/CMakeLists.txt` and re-run CMake to reconfigure.
-- Temporary files created during ILP solve: `_resource_alloc_tmp.lp` (the LP file) and `_resource_alloc_tmp_out.txt` (solver stdout) — these are left in the working directory for inspection.
+- `input_file` — Path to the input file in the custom Markdown-like format
+- `timeout_seconds` — Optional timeout for the ILP solver (default: 300)
 
-If you'd like, I can add a short `docs/BUILD.md` with platform-specific instructions or make the `lp_solve` path configurable via a CMake option.
+The program runs both the greedy heuristic and the ILP solver, printing results for each to stdout.
+
+### Example
+
+```powershell
+# Software project optimization (4 resource types, 4 projects, $25,000 budget)
+.\build\llvm-clang-debug\src\resource_alloc.exe .\EXAMPLE.md
+
+# Hardware design optimization (gate-based resources, 25,000 gate budget)
+.\build\llvm-clang-debug\src\resource_alloc.exe .\EXAMPLE_hwdesign.md 600
+```
+
+### Input File Format
+
+Input files use a custom section-based format with four sections:
+
+```markdown
+# GENERAL
+time_unit = week
+cost_unit = $
+
+# RESOURCE
+| Name             | Cost |
+| system_architect | 600  |
+| developer        | 400  |
+
+# PROJECT
+| Project Name | system_architect | developer |
+| Project_1    | 5                | 10        |
+| Project_2    | 3                | 8         |
+
+# ADDITIONAL_BUDGET
+25000
+```
+
+### Example Input Files
+
+| File                  | Description                                                                                       |
+|-----------------------|---------------------------------------------------------------------------------------------------|
+| `EXAMPLE.md`          | Software project: 4 resource types (system_architect, software_architect, developer, tester), 4 projects, $25,000 budget |
+| `EXAMPLE_hwdesign.md` | Hardware design: resources are divider/multiplier/ALU/shifter with gate costs, 25,000 gate budget |
+
+### Project Structure
+
+```
+resource_alloc/
+├── CMakeLists.txt          # Top-level build configuration (C++17, Clang warnings)
+├── CMakePresets.json        # Build presets (LLVM/VS Clang, Debug/Release)
+├── EXAMPLE.md              # Sample input: software project optimization
+├── EXAMPLE_hwdesign.md     # Sample input: hardware design optimization
+├── external/
+│   ├── CMakeLists.txt      # Placeholder for third-party deps
+│   └── lp_solve/           # Expected location for lp_solve binary
+├── src/
+│   ├── CMakeLists.txt      # Executable target, bakes LP_SOLVE_EXE path
+│   ├── main.cpp            # CLI entry point
+│   ├── DataStructures.h/cpp # Input parser, Resource/Project/DataStore models
+│   ├── Optimize.h/cpp      # Abstract base class with shared formulas and result printer
+│   ├── OptimizeByHeuristic.h/cpp  # Greedy heuristic implementation
+│   └── OptimizeByILP.h/cpp       # ILP file generation, solver invocation, output parsing
+```
+
+### Notes
+
+- If `lp_solve` cannot be found at the baked-in path, place `lp_solve.exe` at `external/lp_solve/lp_solve.exe` or update the path in `src/CMakeLists.txt` and reconfigure.
+- Temporary files created during ILP solve (`_resource_alloc_tmp.lp` and `_resource_alloc_tmp_out.txt`) are left in the working directory for inspection.
